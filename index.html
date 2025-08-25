@@ -33,7 +33,7 @@
     .btn:active { transform: translateY(1px); }
     .legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: .9rem; opacity: .85; }
     .legend span { display: inline-flex; align-items: center; gap: .4rem; }
-    .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,.25); background: linear-gradient(135deg, #ff8a00, #e52e71); }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,.25); background: linear-gradient(135deg, #216869, #2b766d, #358471, #49a078, #73b38d, #88bc97, #9cc5a1); }
     canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
     .mask-container {
       position: fixed; inset: 0; width: 100%; height: 100%;
@@ -145,12 +145,11 @@
       $('strokeWidthOut').textContent = params.strokeWidth.toFixed(1);
     });
 
-    // Color generator (stable per site creation index)
+    // Color generator using the provided palette
+    const colorPalette = ["#216869", "#2b766d", "#358471", "#49a078", "#73b38d", "#88bc97", "#9cc5a1"];
     function randomColor(seed) {
-      const h = (seed * 137.508) % 360;
-      const s = 60 + ((seed * 23.9) % 20);
-      const l = 45 + ((seed * 17.7) % 15);
-      return `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
+      const index = Math.floor(seed) % colorPalette.length;
+      return colorPalette[index];
     }
 
     function randomizeSites(keepColors=false) {
