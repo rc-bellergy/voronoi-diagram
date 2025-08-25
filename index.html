@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Animated Voronoi Diagram (Fixed Colors)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      overflow: hidden; background: #0e0f13; color: #e6e6e6;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif;
+    }
+    .ui { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
+    header, footer {
+      display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .5rem .75rem; pointer-events: auto;
+      background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,0));
+    }
+    header { justify-content: space-between; }
+    .controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    .control {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px; padding: .35rem .6rem; backdrop-filter: blur(6px);
+    }
+    .control input[type="range"] { width: 140px; }
+    .control input[type="checkbox"] { transform: translateY(1px); }
+    .btn {
+      pointer-events: auto; user-select: none; cursor: pointer;
+      border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08);
+      color: inherit; border-radius: 10px; padding: .45rem .7rem; font-weight: 600;
+    }
+    .btn:active { transform: translateY(1px); }
+    footer { justify-content: space-between; background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(0,0,0,0)); }
+    .legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: .9rem; opacity: .85; }
+    .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,.25); background: linear-gradient(135deg, #ff8a00, #e52e71); }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="voronoi"></canvas>
+
+  <div class="ui" aria-hidden="false">
+    <header>
+      <div class="controls">
+        <button class="btn" id="randomize">Randomize</button>
+        <div class="control">
+          <label for="count">Points</label>
+          <input id="count" type="range" min="5" max="600" step="1" value="150" />
+          <output id="countOut">150</output>
+        </div>
+        <div class="control">
+          <label for="speed">Speed</label>
+          <input id="speed" type="range" min="0" max="200" step="1" value="60" />
+          <output id="speedOut">0.60</output>
+        </div>
+        <div class="control">
+          <label for="cellStroke">Cell stroke</label>
+          <input id="cellStroke" type="checkbox" checked />
+        </div>
+        <div class="control">
+          <label for="showSites">Show dots</label>
+          <input id="showSites" type="checkbox" />
+        </div>
+        <div class="control">
+          <label for="wrap">Toroidal wrap</label>
+          <input id="wrap" type="checkbox" />
+        </div>
+      </div>
+      <button class="btn" id="pause">Pause</button>
+    </header>
+
+    <footer>
+      <div class="legend">
+        <span><span class="swatch"></span> Voronoi cells (animated, fixed colors)</span>
+        <span>Move mouse: attract/repel</span>
+      </div>
+      <div class="legend">
+        <span>Resize window to fit canvas</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Utilities
+    const rand = (a=0,b=1)=>a+Math.random()*(b-a);
+    const clamp = (v,min,max)=>v<min?min:(v>max?max:v);
+    const TAU = Math.PI*2;
+
+    // Globals
+    const bounds = { w: 0, h: 0 };
+    let sites = [];
+
+    // Canvas setup
+    const canvas = document.getElementById('voronoi');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    let dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    function resize() {
+      const { innerWidth:w, innerHeight:h } = window;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      bounds.w = w;
+      bounds.h = h;
+    }
+    window.addEventListener('resize', resize, { passive: true });
+    resize();
+
+    // Parameters
+    const params = {
+      count: 150,
+      maxSpeed: 0.6,
+      showSites: false,
+      cellStroke: true,
+      wrap: false,
+      paused: false,
+    };
+
+    // UI wiring
+    const $ = id => document.getElementById(id);
+    $('count').addEventListener('input', e => {
+      params.count = +e.target.value;
+      $('countOut').textContent = params.count;
+      rebuildSites(true); // rebuild with new size; reassign colors only for new sites
+    });
+    $('speed').addEventListener('input', e => {
+      params.maxSpeed = (+e.target.value)/100;
+      $('speedOut').textContent = params.maxSpeed.toFixed(2);
+    });
+    $('cellStroke').addEventListener('change', e => params.cellStroke = e.target.checked);
+    $('showSites').addEventListener('change', e => params.showSites = e.target.checked);
+    $('wrap').addEventListener('change', e => { params.wrap = e.target.checked; });
+    $('randomize').addEventListener('click', () => randomizeSites(true)); // keep colors
+    $('pause').addEventListener('click', e => {
+      params.paused = !params.paused;
+      e.target.textContent = params.paused ? 'Resume' : 'Pause';
+      if (!params.paused) requestAnimationFrame(loop);
+    });
+
+    $('countOut').textContent = params.count;
+    $('speedOut').textContent = params.maxSpeed.toFixed(2);
+
+    // Color generator (stable per site creation index)
+    function randomColor(seed) {
+      const h = (seed * 137.508) % 360;
+      const s = 60 + ((seed * 23.9) % 20);
+      const l = 45 + ((seed * 17.7) % 15);
+      return `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
+    }
+
+    function randomizeSites(keepColors=false) {
+      for (let i = 0; i < sites.length; i++) {
+        const s = sites[i];
+        s.x = rand(0, bounds.w);
+        s.y = rand(0, bounds.h);
+        s.vx = rand(-params.maxSpeed, params.maxSpeed);
+        s.vy = rand(-params.maxSpeed, params.maxSpeed);
+        if (!keepColors) s.color = randomColor(i + 3.14159);
+      }
+    }
+
+    function rebuildSites(preserveExisting=false) {
+      const n = params.count;
+      const old = preserveExisting ? sites : [];
+      const next = new Array(n);
+      for (let i = 0; i < n; i++) {
+        const reuse = old[i];
+        if (reuse) {
+          // Keep same color
+          next[i] = {
+            x: clamp(reuse.x, 0, bounds.w),
+            y: clamp(reuse.y, 0, bounds.h),
+            vx: clamp(reuse.vx, -params.maxSpeed, params.maxSpeed),
+            vy: clamp(reuse.vy, -params.maxSpeed, params.maxSpeed),
+            color: reuse.color
+          };
+        } else {
+          next[i] = {
+            x: rand(0, bounds.w),
+            y: rand(0, bounds.h),
+            vx: rand(-params.maxSpeed, params.maxSpeed),
+            vy: rand(-params.maxSpeed, params.maxSpeed),
+            color: randomColor(i + 3.14159)
+          };
+        }
+      }
+      sites = next;
+    }
+
+    rebuildSites(false);
+
+    // Mouse interaction
+    const mouse = { x: 0, y: 0, down: false, inside: false };
+    window.addEventListener('pointermove', e => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.inside = true;
+    });
+    window.addEventListener('pointerdown', () => mouse.down = true);
+    window.addEventListener('pointerup', () => mouse.down = false);
+    window.addEventListener('pointerleave', () => mouse.inside = false);
+
+    // Delaunay (Bowyer–Watson)
+    function delaunay(points) {
+      const { w, h } = bounds;
+      const margin = Math.max(w, h) * 10;
+      const stA = { x: -margin, y: -margin };
+      const stB = { x:  0.5*w, y:  margin };
+      const stC = { x:  w+margin, y: -margin };
+      const tris = [{ a: stA, b: stB, c: stC, cc: circumcircle(stA, stB, stC) }];
+
+      for (let p of points) {
+        const bad = [];
+        for (let t of tris) {
+          if (pointInCircumcircle(p, t.cc)) bad.push(t);
+        }
+        const edges = [];
+        for (let t of bad) {
+          edges.push([t.a, t.b], [t.b, t.c], [t.c, t.a]);
+        }
+        const unique = [];
+        for (let i=0;i<edges.length;i++) {
+          let dup = false;
+          for (let j=0;j<edges.length;j++) if (i !== j) {
+            const e1 = edges[i], e2 = edges[j];
+            if ((e1[0]===e2[1] && e1[1]===e2[0]) || (e1[0]===e2[0] && e1[1]===e2[1])) { dup = true; break; }
+          }
+          if (!dup) unique.push(edges[i]);
+        }
+        for (let t of bad) {
+          const idx = tris.indexOf(t);
+          if (idx >= 0) tris.splice(idx, 1);
+        }
+        for (let e of unique) {
+          const nt = { a: e[0], b: e[1], c: p };
+          nt.cc = circumcircle(nt.a, nt.b, nt.c);
+          if (isFinite(nt.cc.r2)) tris.push(nt);
+        }
+      }
+      return tris.filter(t => t.a!==stA && t.a!==stB && t.a!==stC &&
+                               t.b!==stA && t.b!==stB && t.b!==stC &&
+                               t.c!==stA && t.c!==stB && t.c!==stC);
+    }
+
+    function circumcircle(a,b,c) {
+      const ax=a.x, ay=a.y, bx=b.x, by=b.y, cx=c.x, cy=c.y;
+      const d = 2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));
+      if (Math.abs(d) < 1e-9) return { x: Infinity, y: Infinity, r2: Infinity };
+      const ux = ((ax*ax+ay*ay)*(by-cy) + (bx*bx+by*by)*(cy-ay) + (cx*cx+cy*cy)*(ay-by)) / d;
+      const uy = ((ax*ax+ay*ay)*(cx-bx) + (bx*bx+by*by)*(ax-cx) + (cx*cx+cy*cy)*(bx-ax)) / d;
+      const dx = ux-ax, dy = uy-ay;
+      return { x: ux, y: uy, r2: dx*dx + dy*dy };
+    }
+    function pointInCircumcircle(p, cc) {
+      const dx = p.x - cc.x, dy = p.y - cc.y;
+      return (dx*dx + dy*dy) <= cc.r2;
+    }
+
+    // Build Voronoi from Delaunay
+    function buildVoronoi(points) {
+      const tris = delaunay(points);
+      const map = new Map();
+      function add(site, vx, vy) {
+        const dx = vx - site.x, dy = vy - site.y;
+        const ang = Math.atan2(dy, dx);
+        if (!map.has(site)) map.set(site, []);
+        map.get(site).push({ x: vx, y: vy, ang });
+      }
+      for (let t of tris) {
+        const cc = t.cc;
+        add(t.a, cc.x, cc.y);
+        add(t.b, cc.x, cc.y);
+        add(t.c, cc.x, cc.y);
+      }
+      const cells = [];
+      for (let [site, verts] of map) {
+        verts.sort((u,v)=>u.ang - v.ang);
+        const poly = clipPolygon(verts.map(v=>({x:v.x, y:v.y})), 0, 0, bounds.w, bounds.h);
+        if (poly.length >= 3) {
+          cells.push({ site, poly, color: site.color });
+        }
+      }
+      return cells;
+    }
+
+    // Sutherland–Hodgman rectangle clipping
+    function clipPolygon(poly, x0, y0, x1, y1) {
+      function clipEdge(points, inside, intersect) {
+        const out = [];
+        for (let i=0, n=points.length; i<n; i++) {
+          const A = points[i], B = points[(i+1)%n];
+          const Ain = inside(A), Bin = inside(B);
+          if (Ain && Bin) {
+            out.push(B);
+          } else if (Ain && !Bin) {
+            out.push(intersect(A,B));
+          } else if (!Ain && Bin) {
+            out.push(intersect(A,B), B);
+          }
+        }
+        return out;
+      }
+      let pts = poly;
+      pts = clipEdge(pts, p=>p.x>=x0, (A,B)=>{ const t=(x0-A.x)/(B.x-A.x); return { x:x0, y:A.y+t*(B.y-A.y) }; });
+      if (!pts.length) return pts;
+      pts = clipEdge(pts, p=>p.x<=x1, (A,B)=>{ const t=(x1-A.x)/(B.x-A.x); return { x:x1, y:A.y+t*(B.y-A.y) }; });
+      if (!pts.length) return pts;
+      pts = clipEdge(pts, p=>p.y>=y0, (A,B)=>{ const t=(y0-A.y)/(B.y-A.y); return { x:A.x+t*(B.x-A.x), y:y0 }; });
+      if (!pts.length) return pts;
+      pts = clipEdge(pts, p=>p.y<=y1, (A,B)=>{ const t=(y1-A.y)/(B.y-A.y); return { x:A.x+t*(B.x-A.x), y:y1 }; });
+      return pts;
+    }
+
+    // Animation and physics
+    function update(dt) {
+      const w = bounds.w, h = bounds.h;
+      const accel = params.maxSpeed * 0.6;
+      if (mouse.inside) {
+        for (let s of sites) {
+          const dx = mouse.x - s.x;
+          const dy = mouse.y - s.y;
+          const d = Math.hypot(dx, dy) + 1e-6;
+          const force = mouse.down ? (-accel * 120 / d) : (accel * 30 / d);
+          s.vx += (dx/d) * (force * dt);
+          s.vy += (dy/d) * (force * dt);
+        }
+      }
+      const maxV = params.maxSpeed;
+      for (let s of sites) {
+        s.vx = clamp(s.vx, -maxV, maxV);
+        s.vy = clamp(s.vy, -maxV, maxV);
+        s.x += s.vx * 60 * dt;
+        s.y += s.vy * 60 * dt;
+
+        if (params.wrap) {
+          if (s.x < 0) s.x += w;
+          if (s.x > w) s.x -= w;
+          if (s.y < 0) s.y += h;
+          if (s.y > h) s.y -= h;
+        } else {
+          if (s.x < 0) { s.x = 0; s.vx *= -1; }
+          if (s.x > w) { s.x = w; s.vx *= -1; }
+          if (s.y < 0) { s.y = 0; s.vy *= -1; }
+          if (s.y > h) { s.y = h; s.vy *= -1; }
+        }
+      }
+    }
+
+    function render(cells) {
+      const { w, h } = bounds;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = '#0e0f13';
+      ctx.fillRect(0,0,w,h);
+
+      ctx.lineWidth = 1;
+      for (let i=0; i<cells.length; i++) {
+        const cell = cells[i];
+        ctx.beginPath();
+        const p0 = cell.poly[0];
+        ctx.moveTo(p0.x, p0.y);
+        for (let k=1; k<cell.poly.length; k++) ctx.lineTo(cell.poly[k].x, cell.poly[k].y);
+        ctx.closePath();
+        ctx.fillStyle = cell.color || '#888';
+        ctx.fill();
+        if (params.cellStroke) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.stroke();
+        }
+      }
+
+      if (params.showSites) {
+        ctx.fillStyle = '#ffffff';
+        for (let s of sites) {
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 2.2, 0, TAU);
+          ctx.fill();
+        }
+      }
+    }
+
+    // Main loop
+    let last = performance.now();
+    function loop(t) {
+      if (params.paused) return;
+      const dt = Math.min(0.033, (t - last) / 1000);
+      last = t;
+      update(dt);
+      const cells = buildVoronoi(sites);
+      render(cells);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
