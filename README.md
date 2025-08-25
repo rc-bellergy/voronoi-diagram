@@ -17,13 +17,13 @@ The application creates a dynamic visualization of a Voronoi diagram where point
 
 ### Core Algorithms
 
-1. **Delaunay Triangulation**: Implemented using the Bowyer-Watson algorithm in the [`delaunay()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L207-L246) function
-2. **Voronoi Diagram Generation**: Converts Delaunay triangulation to Voronoi cells in the [`buildVoronoi()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L263-L287) function
-3. **Polygon Clipping**: Uses the Sutherland-Hodgman algorithm to clip Voronoi cells to screen boundaries in the [`clipPolygon()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L290-L315) function
+1. **Delaunay Triangulation**: Implemented using the Bowyer-Watson algorithm in the [`delaunay()`](index.html#L207-L246) function
+2. **Voronoi Diagram Generation**: Converts Delaunay triangulation to Voronoi cells in the [`buildVoronoi()`](index.html#L263-L287) function
+3. **Polygon Clipping**: Uses the Sutherland-Hodgman algorithm to clip Voronoi cells to screen boundaries in the [`clipPolygon()`](index.html#L290-L315) function
 
 ### Physics Simulation
 
-The [`update()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L318-L350) function handles:
+The [`update()`](index.html#L318-L350) function handles:
 - Point movement with velocity
 - Mouse attraction/repulsion forces
 - Boundary collision detection (with optional toroidal wrapping)
@@ -31,7 +31,7 @@ The [`update()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L318-
 
 ### Rendering System
 
-The [`render()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L352-L382) function:
+The [`render()`](index.html#L352-L382) function:
 - Clears and redraws the canvas each frame
 - Draws Voronoi cells with their assigned colors
 - Optionally renders cell borders and site points
@@ -48,7 +48,7 @@ The interface includes:
 
 ### Color Generation
 
-The [`randomColor()`](file:///Volumes/SSD/playground/voronoi-diagram/index.html#L147-L152) function generates consistent HSL colors based on a seed value, ensuring each point maintains its color throughout the animation.
+The [`randomColor()`](index.html#L147-L152) function generates consistent HSL colors based on a seed value, ensuring each point maintains its color throughout the animation.
 
 ## Architecture
 
