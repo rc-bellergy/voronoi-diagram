@@ -3,6 +3,7 @@
 ## Overview
 
 The application creates a dynamic visualization of a Voronoi diagram where points move according to a physics simulation. Users can interact with the diagram through various controls.
+![](screen.png)
 
 ## Key Features
 
