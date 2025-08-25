@@ -10,7 +10,6 @@ The application creates a dynamic visualization of a Voronoi diagram where point
 2. **Interactive Controls**: Users can adjust parameters like point count, animation speed, and visual options
 3. **Fixed Color Scheme**: Each point maintains a consistent color throughout its lifetime
 4. **Responsive Design**: Automatically adjusts to window resizing
-5. **Toroidal Wrapping**: Option to make points wrap around screen edges
 
 ## Technical Implementation
 
@@ -22,9 +21,9 @@ The application creates a dynamic visualization of a Voronoi diagram where point
 
 ### Physics Simulation
 
-The [`update()`](index.html#L318-L350) function handles:
+The [`update()`](index.html#L318-L344) function handles:
 - Point movement with velocity
-- Boundary collision detection (with optional toroidal wrapping)
+- Boundary collision detection
 - Velocity clamping
 
 ### Rendering System
@@ -41,7 +40,6 @@ The interface includes:
 - Animation speed control
 - Toggle for cell borders
 - Toggle for showing site points
-- Toggle for toroidal wrapping
 - Randomize and Pause/Resume buttons
 
 ### Color Generation
