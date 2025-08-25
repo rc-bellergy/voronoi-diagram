@@ -8,7 +8,7 @@
     :root { color-scheme: light dark; }
     html, body {
       margin: 0; padding: 0; height: 100%;
-      overflow: hidden; background: #0e0f13; color: #e6e6e6;
+      overflow: hidden; background: #216869; color: #9cc5a1;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif;
     }
     .ui { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
@@ -34,7 +34,7 @@
     .legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: .9rem; opacity: .85; }
     .legend span { display: inline-flex; align-items: center; gap: .4rem; }
     .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,.25); background: linear-gradient(135deg, #216869, #2b766d, #358471, #49a078, #73b38d, #88bc97, #9cc5a1); }
-    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; scale:130%; }
     .mask-container {
       position: fixed; inset: 0; width: 100%; height: 100%;
       clip-path: inset(10% 10% 10% 10%);
@@ -42,10 +42,7 @@
   </style>
 </head>
 <body>
-  <div class="mask-container">
-    <canvas id="voronoi"></canvas>
-  </div>
-
+  <canvas id="voronoi"></canvas>
   <div class="ui" aria-hidden="false">
     <header>
       <div class="controls">
@@ -326,7 +323,7 @@
     function render(cells) {
       const { w, h } = bounds;
       ctx.clearRect(0,0,w,h);
-      ctx.fillStyle = '#0e0f13';
+      ctx.fillStyle = '#216869';
       ctx.fillRect(0,0,w,h);
 
       ctx.lineWidth = 1;
