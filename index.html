@@ -80,7 +80,6 @@
     <footer>
       <div class="legend">
         <span><span class="swatch"></span> Voronoi cells (animated, fixed colors)</span>
-        <span>Move mouse: attract/repel</span>
       </div>
       <div class="legend">
         <span>Resize window to fit canvas</span>
@@ -198,16 +197,6 @@
 
     rebuildSites(false);
 
-    // Mouse interaction
-    const mouse = { x: 0, y: 0, down: false, inside: false };
-    window.addEventListener('pointermove', e => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.inside = true;
-    });
-    window.addEventListener('pointerdown', () => mouse.down = true);
-    window.addEventListener('pointerup', () => mouse.down = false);
-    window.addEventListener('pointerleave', () => mouse.inside = false);
 
     // Delaunay (Bowyer–Watson)
     function delaunay(points) {
@@ -324,16 +313,6 @@
     function update(dt) {
       const w = bounds.w, h = bounds.h;
       const accel = params.maxSpeed * 0.6;
-      if (mouse.inside) {
-        for (let s of sites) {
-          const dx = mouse.x - s.x;
-          const dy = mouse.y - s.y;
-          const d = Math.hypot(dx, dy) + 1e-6;
-          const force = mouse.down ? (-accel * 120 / d) : (accel * 30 / d);
-          s.vx += (dx/d) * (force * dt);
-          s.vy += (dy/d) * (force * dt);
-        }
-      }
       const maxV = params.maxSpeed;
       for (let s of sites) {
         s.vx = clamp(s.vx, -maxV, maxV);

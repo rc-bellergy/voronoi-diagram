@@ -2,16 +2,15 @@
 
 ## Overview
 
-The application creates a dynamic visualization of a Voronoi diagram where points move according to a physics simulation. Users can interact with the diagram through various controls and by moving their mouse over the canvas.
+The application creates a dynamic visualization of a Voronoi diagram where points move according to a physics simulation. Users can interact with the diagram through various controls.
 
 ## Key Features
 
 1. **Animated Voronoi Diagram**: Points move continuously, creating a constantly changing Voronoi tessellation
 2. **Interactive Controls**: Users can adjust parameters like point count, animation speed, and visual options
-3. **Mouse Interaction**: Attract/repel points by moving the mouse over the canvas
-4. **Fixed Color Scheme**: Each point maintains a consistent color throughout its lifetime
-5. **Responsive Design**: Automatically adjusts to window resizing
-6. **Toroidal Wrapping**: Option to make points wrap around screen edges
+3. **Fixed Color Scheme**: Each point maintains a consistent color throughout its lifetime
+4. **Responsive Design**: Automatically adjusts to window resizing
+5. **Toroidal Wrapping**: Option to make points wrap around screen edges
 
 ## Technical Implementation
 
@@ -25,7 +24,6 @@ The application creates a dynamic visualization of a Voronoi diagram where point
 
 The [`update()`](index.html#L318-L350) function handles:
 - Point movement with velocity
-- Mouse attraction/repulsion forces
 - Boundary collision detection (with optional toroidal wrapping)
 - Velocity clamping
 
@@ -65,9 +63,8 @@ The code is organized in a linear fashion:
 4. UI event wiring
 5. Color generation
 6. Site management functions
-7. Mouse interaction handling
-8. Geometric algorithms (Delaunay, Voronoi, clipping)
-9. Physics and animation functions
-10. Main render loop
+7. Geometric algorithms (Delaunay, Voronoi, clipping)
+8. Physics and animation functions
+9.  Main render loop
 
 This self-contained implementation demonstrates advanced computational geometry concepts in a visually appealing and interactive web application.
